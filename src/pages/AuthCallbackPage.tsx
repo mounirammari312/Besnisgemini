@@ -40,19 +40,16 @@ export function AuthCallbackPage() {
 
         if (createError) console.error('Error creating profile:', createError);
         
-        // If supplier, create base supplier entry via API or direct
+        // If supplier, create base supplier entry directly
         if (role === 'supplier') {
-          await fetch('/api/suppliers/register', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              name: session.user.user_metadata.full_name,
-              company_name: company
-            })
-          });
+          await supabase.from('suppliers').insert([{
+            id: session.user.id,
+            name: session.user.user_metadata.full_name,
+            company_name: company,
+            rating: 0,
+            verified: false,
+            joined: new Date().getFullYear().toString()
+          }]);
         }
       }
 

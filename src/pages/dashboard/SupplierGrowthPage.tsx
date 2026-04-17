@@ -7,26 +7,27 @@ import { Award, Megaphone, CheckCircle2, Loader2, Sparkles, TrendingUp, Clock, S
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
+import { supabase } from '@/lib/supabase';
+
 export function SupplierGrowthPage() {
   const { session, user } = useAuth();
   const { language } = useAppStore();
   const [isSubmitting, setIsSubmitting] = React.useState<string | null>(null);
 
   const handleRequestBadge = async (type: string) => {
+    if (!user?.id) return;
     setIsSubmitting(type);
     try {
-      const res = await fetch('/api/badges/requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ badge_type_id: type })
-      });
-      if (res.ok) {
-        toast.success(language === 'ar' ? 'تم تقديم طلب الشارة بنجاح' : 'Demande de badge envoyée !');
-      }
+      const { error } = await supabase.from('badge_requests').insert([{
+        supplier_id: user.id,
+        badge_type_id: type,
+        status: 'pending'
+      }]);
+
+      if (error) throw error;
+      toast.success(language === 'ar' ? 'تم تقديم طلب الشارة بنجاح' : 'Demande de badge envoyée !');
     } catch (e) {
+      console.error('Error submitting badge request:', e);
       toast.error('Error submitting request');
     } finally {
       setIsSubmitting(null);
@@ -34,24 +35,21 @@ export function SupplierGrowthPage() {
   };
 
   const handleRequestAd = async (type: string) => {
+    if (!user?.id) return;
     setIsSubmitting(type);
     try {
-      const res = await fetch('/api/ads/requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({ 
-          ad_type_id: type,
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-        })
-      });
-      if (res.ok) {
-        toast.success(language === 'ar' ? 'تم تقديم طلب الإعلان بنجاح' : 'Demande d\'annonce envoyée !');
-      }
+      const { error } = await supabase.from('ad_requests').insert([{
+        supplier_id: user.id,
+        ad_type_id: type,
+        status: 'pending',
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      }]);
+
+      if (error) throw error;
+      toast.success(language === 'ar' ? 'تم تقديم طلب الإعلان بنجاح' : 'Demande d\'annonce envoyée !');
     } catch (e) {
+      console.error('Error submitting ad request:', e);
       toast.error('Error submitting request');
     } finally {
       setIsSubmitting(null);

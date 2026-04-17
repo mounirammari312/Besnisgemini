@@ -20,35 +20,67 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { supabase } from '@/lib/supabase';
+
 const data = [
-  { name: 'Jan', sales: 4000, quotes: 2400 },
-  { name: 'Feb', sales: 3000, quotes: 1398 },
-  { name: 'Mar', sales: 2000, quotes: 9800 },
-  { name: 'Apr', sales: 2780, quotes: 3908 },
-  { name: 'May', sales: 1890, quotes: 4800 },
-  { name: 'Jun', sales: 2390, quotes: 3800 },
+  { name: 'Jan', sales: 0, quotes: 0 },
+  { name: 'Feb', sales: 0, quotes: 0 },
+  { name: 'Mar', sales: 0, quotes: 0 },
+  { name: 'Apr', sales: 0, quotes: 0 },
+  { name: 'May', sales: 0, quotes: 0 },
+  { name: 'Jun', sales: 0, quotes: 0 },
 ];
 
 export function SupplierOverview() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const [stats, setStats] = React.useState<any>(null);
+  const [recentOrders, setRecentOrders] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
+      if (!user?.id) return;
+      
       try {
-        const res = await fetch('/api/supplier/dashboard', {
-          headers: { 'Authorization': `Bearer ${session?.access_token}` }
+        setIsLoading(true);
+        // 1. Fetch Stats
+        const [ordersRes, quotesRes, productsRes, supplierRes] = await Promise.all([
+          supabase.from('orders').select('total_amount').eq('supplier_id', user.id),
+          supabase.from('quotes').select('id', { count: 'exact' }).eq('supplier_id', user.id),
+          supabase.from('products').select('id', { count: 'exact' }).eq('supplier_id', user.id),
+          supabase.from('suppliers').select('rating').eq('id', user.id).single()
+        ]);
+
+        const totalSales = ordersRes.data?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0;
+        
+        // 2. Fetch Recent Orders
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('*, profiles(*)')
+          .eq('supplier_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        setStats({
+          totalSales,
+          quotesCount: quotesRes.count || 0,
+          productsCount: productsRes.count || 0,
+          avgRating: supplierRes.data?.rating || 0
         });
-        const data = await res.json();
-        setStats(data);
+        
+        setRecentOrders(orders || []);
       } catch (e) {
-        console.error('Error fetching stats');
+        console.error('Error fetching dashboard data:', e);
+      } finally {
+        setIsLoading(false);
       }
     };
-    if (session) fetchStats();
-  }, [session]);
+    
+    if (session) fetchDashboardData();
+  }, [session, user?.id]);
 
-  const dashboardData = stats?.chartData || data;
+  if (isLoading) return <PageSkeleton />;
 
   return (
     <div className="space-y-8">
@@ -92,7 +124,7 @@ export function SupplierOverview() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dashboardData}>
+              <AreaChart data={data}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#1B3A5C" stopOpacity={0.1}/>
@@ -115,7 +147,7 @@ export function SupplierOverview() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dashboardData}>
+              <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
@@ -127,7 +159,7 @@ export function SupplierOverview() {
         </Card>
       </div>
 
-      {/* Recent Orders Table Sample */}
+      {/* Recent Orders Table */}
       <Card className="rounded-2xl border-none shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-heading text-lg font-bold">آخر الطلبات</CardTitle>
@@ -139,21 +171,33 @@ export function SupplierOverview() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-right p-4 font-bold">رقم الطلب</th>
-                  <th className="text-right p-4 font-bold">المنتج</th>
                   <th className="text-right p-4 font-bold">المشتري</th>
                   <th className="text-right p-4 font-bold">المبلغ</th>
                   <th className="text-right p-4 font-bold">الحالة</th>
+                  <th className="text-right p-4 font-bold">التاريخ</th>
                 </tr>
               </thead>
               <tbody>
-                {[1, 2, 3].map(i => (
-                  <tr key={i} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="p-4 font-medium">#ORD-2024-{i}</td>
-                    <td className="p-4">آلة طحن صناعية...</td>
-                    <td className="p-4">شركة الأمل للبناء</td>
-                    <td className="p-4 font-bold">120,000 د.ج</td>
+                {recentOrders.length === 0 && (
+                   <tr>
+                     <td colSpan={5} className="p-8 text-center text-muted-foreground italic">لا توجد طلبات حالياً</td>
+                   </tr>
+                )}
+                {recentOrders.map((order) => (
+                  <tr key={order.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <td className="p-4 font-medium font-mono text-xs">#{order.id.slice(0, 8).toUpperCase()}</td>
+                    <td className="p-4">{order.profiles?.display_name || order.profiles?.email}</td>
+                    <td className="p-4 font-bold">{formatCurrency(order.total_amount, order.currency)}</td>
                     <td className="p-4">
-                      <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold font-sans">DELIVERED</span>
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-xs font-bold font-sans",
+                        order.status === 'delivered' ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                      )}>
+                        {order.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="p-4 text-xs text-muted-foreground">
+                      {new Date(order.created_at).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}

@@ -13,6 +13,7 @@ import { useSupabaseQuery } from '@/hooks/useSupabase';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import { Input } from '@/components/ui/input';
 export function ProductDetailsPage() {
   const { id } = useParams();
   const { language } = useAppStore();
-  const { profile, session } = useAuth();
+  const { profile, session, user } = useAuth();
   const t = translations[language];
   
   const { data: products, loading } = useSupabaseQuery<any>('products', (q) => q.eq('id', id).select('*, suppliers(*)').single(), [id]);
@@ -48,33 +49,28 @@ export function ProductDetailsPage() {
   const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
 
   const handlePostReview = async () => {
-    if (!session) {
+    if (!session || !user) {
       toast.error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Veuillez vous connecter d\'abord');
       return;
     }
 
     setIsSubmittingReview(true);
     try {
-      const response = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          product_id: product.id,
-          rating: reviewRating,
-          comment: reviewComment,
-        }),
-      });
+      const { error } = await supabase.from('reviews').insert([{
+        product_id: product.id,
+        buyer_id: user.id,
+        rating: reviewRating,
+        comment: reviewComment,
+      }]);
 
-      if (!response.ok) throw new Error('Failed to post review');
+      if (error) throw error;
 
       toast.success(language === 'ar' ? 'شكراً لتقييمك!' : 'Merci pour votre avis !');
       setReviewComment('');
       setReviewRating(5);
       refreshReviews();
     } catch (error) {
+      console.error('Review error:', error);
       toast.error(language === 'ar' ? 'حدث خطأ أثناء إرسال التقييم' : 'Erreur lors de l\'envoi');
     } finally {
       setIsSubmittingReview(false);
@@ -82,32 +78,28 @@ export function ProductDetailsPage() {
   };
 
   const handleRequestQuote = async () => {
-    if (!session) {
+    if (!session || !user) {
       toast.error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Veuillez vous connecter d\'abord');
       return;
     }
 
     setIsQuoting(true);
     try {
-      const response = await fetch('/api/quotes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          product_id: product.id,
-          supplier_id: product.supplier_id,
-          quantity: quoteQty,
-          message: quoteMsg,
-        }),
-      });
+      const { error } = await supabase.from('quotes').insert([{
+        product_id: product.id,
+        buyer_id: user.id,
+        supplier_id: product.supplier_id,
+        quantity: quoteQty,
+        message: quoteMsg,
+        status: 'pending'
+      }]);
 
-      if (!response.ok) throw new Error('Failed to send quote');
+      if (error) throw error;
 
       toast.success(language === 'ar' ? 'تم إرسال طلب عرض السعر بنجاح!' : 'Devis envoyé avec succès !');
       setIsModalOpen(false);
     } catch (error) {
+      console.error('Quote error:', error);
       toast.error(language === 'ar' ? 'حدث خطأ أثناء إرسال الطلب' : 'Erreur lors de l\'envoi');
     } finally {
       setIsQuoting(false);

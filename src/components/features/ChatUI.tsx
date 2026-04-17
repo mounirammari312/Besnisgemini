@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-
 import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export function ChatUI() {
   const { session, user } = useAuth();
@@ -18,58 +18,85 @@ export function ChatUI() {
 
   React.useEffect(() => {
     const fetchChats = async () => {
+      if (!user?.id) return;
       try {
-        const res = await fetch('/api/me/chats', {
-          headers: { 'Authorization': `Bearer ${session?.access_token}` }
-        });
-        const data = await res.json();
-        setChats(data);
-        if (data.length > 0) setSelectedChat(data[0]);
+        const { data, error } = await supabase
+          .from('chats')
+          .select('*, suppliers(*), profiles!chats_buyer_id_fkey(*)')
+          .or(`buyer_id.eq.${user.id},supplier_id.eq.${user.id}`)
+          .order('updated_at', { ascending: false });
+
+        if (error) throw error;
+        setChats(data || []);
+        if (data && data.length > 0) setSelectedChat(data[0]);
       } catch (e) {
-        console.error('Error fetching chats');
+        console.error('Error fetching chats:', e);
       } finally {
         setLoading(false);
       }
     };
     if (session) fetchChats();
-  }, [session]);
+  }, [session, user?.id]);
 
   const fetchMessages = async (chatId: string) => {
     try {
-      const res = await fetch(`/api/messages/${chatId}`, {
-        headers: { 'Authorization': `Bearer ${session?.access_token}` }
-      });
-      const data = await res.json();
-      setMessages(data);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+        
+      if (error) throw error;
+      setMessages(data || []);
     } catch (e) {
-      console.error('Error fetching messages');
+      console.error('Error fetching messages:', e);
     }
   };
 
   React.useEffect(() => {
     if (selectedChat) {
       fetchMessages(selectedChat.id);
+
+      // Real-time subscription
+      const channel = supabase
+        .channel(`chat:${selectedChat.id}`)
+        .on('postgres_changes', { 
+           event: 'INSERT', 
+           schema: 'public', 
+           table: 'messages',
+           filter: `chat_id=eq.${selectedChat.id}`
+        }, (payload) => {
+           setMessages(prev => [...prev, payload.new]);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [selectedChat, session]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedChat) return;
+    if (!newMessage.trim() || !selectedChat || !user?.id) return;
 
     try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}` 
-        },
-        body: JSON.stringify({ chat_id: selectedChat.id, content: newMessage })
-      });
-      if (res.ok) {
-        setNewMessage('');
-        fetchMessages(selectedChat.id);
-      }
+      const { error } = await supabase.from('messages').insert([{
+        chat_id: selectedChat.id,
+        sender_id: user.id,
+        content: newMessage
+      }]);
+
+      if (error) throw error;
+      
+      // Update last message in chat
+      await supabase.from('chats').update({ 
+        last_message: newMessage,
+        updated_at: new Date().toISOString()
+      }).eq('id', selectedChat.id);
+
+      setNewMessage('');
     } catch (e) {
-      console.error('Error sending message');
+      console.error('Error sending message:', e);
     }
   };
 

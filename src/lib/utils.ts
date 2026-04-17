@@ -9,11 +9,10 @@ export function cn(...inputs: ClassValue[]) {
 export const formatCurrency = (amount: number, fromCurrency: Currency = 'DZD') => {
   const { currency, exchangeRates } = useAppStore.getState();
   
-  // Convert to DZD first if needed (simplified assuming stored in DZD)
-  const baseAmount = amount; 
-  const converted = baseAmount * (exchangeRates[currency] || 1);
+  // Convert from DZD (base) to target currency
+  const converted = amount * (exchangeRates[currency] || 1);
   
-  const formatter = new Intl.NumberFormat(currency === 'DZD' ? 'ar-DZ' : 'fr-FR', {
+  const formatter = new Intl.NumberFormat(currency === 'DZD' ? 'ar-DZ' : (currency === 'EUR' ? 'fr-FR' : 'en-US'), {
     style: 'currency',
     currency: currency,
     minimumFractionDigits: currency === 'DZD' ? 0 : 2,

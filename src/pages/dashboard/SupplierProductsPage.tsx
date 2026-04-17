@@ -62,8 +62,8 @@ export function SupplierProductsPage() {
   };
 
   const handleCreateProduct = async () => {
-    if (!session || !mainImage) {
-      toast.error('Image required');
+    if (!session || !mainImage || !user) {
+      toast.error('Required fields missing');
       return;
     }
 
@@ -91,26 +91,23 @@ export function SupplierProductsPage() {
         }
       }
 
-      // 3. Create Product
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-          min_order: parseInt(formData.min_order),
-          main_image: mainPublicUrl,
-          images: extraUrls,
-        })
-      });
+      // 3. Create Product directly via Supabase
+      const { data: product, error: productError } = await supabase.from('products').insert([{
+        supplier_id: user.id,
+        name_ar: formData.name_ar,
+        name_fr: formData.name_fr,
+        price: parseFloat(formData.price),
+        min_order: parseInt(formData.min_order),
+        description_ar: formData.description_ar,
+        description_fr: formData.description_fr,
+        category_id: formData.category_id,
+        main_image: mainPublicUrl,
+        gallery: extraUrls,
+      }]).select().single();
 
-      if (!res.ok) throw new Error('API Error');
-      const product = await res.json();
+      if (productError) throw productError;
 
-      // 3. Create Variations if any
+      // 4. Create Variations if any
       if (variations.length > 0) {
         await supabase.from('product_variations').insert(
           variations.map(v => ({ ...v, product_id: product.id }))
@@ -120,8 +117,9 @@ export function SupplierProductsPage() {
       toast.success(language === 'ar' ? 'تمت إضافة المنتج بنجاح' : 'Produit ajouté !');
       setIsModalOpen(false);
       refresh();
-    } catch (error) {
-      toast.error('Error creating product');
+    } catch (error: any) {
+      console.error('Error creating product:', error);
+      toast.error('Error creating product: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }
