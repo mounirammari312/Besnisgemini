@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
-import { Layout } from '@/components/layout/Layout';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Layout } from '@/components/Layout/Layout';
+import { DashboardLayout } from '@/components/Layout/DashboardLayout';
 import { HomePage } from '@/pages/HomePage';
 import { AuthPage } from '@/pages/AuthPage';
 import { SearchPage } from '@/pages/SearchPage';
