@@ -1,0 +1,48 @@
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { Layout } from '@/components/layout/Layout';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { HomePage } from '@/pages/HomePage';
+import { AuthPage } from '@/pages/AuthPage';
+import { SearchPage } from '@/pages/SearchPage';
+import { ProductDetailsPage } from '@/pages/ProductDetailsPage';
+import { SupplierProfilePage } from '@/pages/SupplierProfilePage';
+import { CartPage } from '@/pages/CartPage';
+import { ComparisonPage } from '@/pages/ComparisonPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
+import { SupplierOverview } from '@/pages/dashboard/SupplierOverview';
+import { SupplierProductsPage } from '@/pages/dashboard/SupplierProductsPage';
+import { BuyerOverview } from '@/pages/dashboard/BuyerOverview';
+import { AdminOverview } from '@/pages/dashboard/AdminOverview';
+import { MessagesPage } from '@/pages/dashboard/MessagesPage';
+import { Toaster } from '@/components/ui/sonner';
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Main Layout Routes */}
+        <Route element={<Layout><Outlet /></Layout>}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/register" element={<AuthPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
+          <Route path="/supplier/:id" element={<SupplierProfilePage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/compare" element={<ComparisonPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+
+        {/* Dashboard Routes */}
+        <Route path="/dashboard/supplier" element={<DashboardLayout role="supplier"><SupplierOverview /></DashboardLayout>} />
+        <Route path="/dashboard/supplier/products" element={<DashboardLayout role="supplier"><SupplierProductsPage /></DashboardLayout>} />
+        <Route path="/dashboard/supplier/messages" element={<DashboardLayout role="supplier"><MessagesPage /></DashboardLayout>} />
+        <Route path="/dashboard/buyer" element={<DashboardLayout role="buyer"><BuyerOverview /></DashboardLayout>} />
+        <Route path="/dashboard/buyer/messages" element={<DashboardLayout role="buyer"><MessagesPage /></DashboardLayout>} />
+        <Route path="/admin" element={<DashboardLayout role="admin"><AdminOverview /></DashboardLayout>} />
+      </Routes>
+      <Toaster position="top-center" richColors />
+    </BrowserRouter>
+  );
+}

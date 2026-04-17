@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Information about a user (buyer, supplier, or admin)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "displayName": { "type": "string", "description": "User's full name" },
+        "role": { "type": "string", "enum": ["buyer", "supplier", "admin"], "description": "User's role on the platform" },
+        "photoURL": { "type": "string", "format": "uri", "description": "User's profile picture URL" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "phoneNumber": { "type": "string", "description": "User's phone number" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "SupplierProfile": {
+      "title": "SupplierProfile",
+      "description": "Storefront information for a supplier",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "UID of the supplier user" },
+        "name": { "type": "string", "description": "Company name" },
+        "description_ar": { "type": "string", "description": "Arabic company description" },
+        "description_fr": { "type": "string", "description": "French company description" },
+        "logo": { "type": "string", "format": "uri", "description": "Company logo URL" },
+        "cover": { "type": "string", "format": "uri", "description": "Cover image URL" },
+        "location": { "type": "string", "description": "Physical location" },
+        "rating": { "type": "number", "description": "Average rating" },
+        "reviews_count": { "type": "number", "description": "Number of reviews" },
+        "badges": { "type": "array", "items": { "type": "string" }, "description": "Trust badges" },
+        "joined": { "type": "string", "description": "Year joined" }
+      },
+      "required": ["uid", "name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Item listed for sale on the platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique product ID" },
+        "supplierId": { "type": "string", "description": "UID of the selling supplier" },
+        "name_ar": { "type": "string", "description": "Arabic product name" },
+        "name_fr": { "type": "string", "description": "French product name" },
+        "price": { "type": "number", "description": "Base price for calculations" },
+        "currency": { "type": "string", "enum": ["DZD", "EUR", "USD"] },
+        "image": { "type": "string", "format": "uri", "description": "Main product image URL" },
+        "gallery": { "type": "array", "items": { "type": "string" } },
+        "categoryId": { "type": "string", "description": "Linked category ID" },
+        "specs": { "type": "object", "description": "Technical specifications" },
+        "rating": { "type": "number", "description": "Average rating" },
+        "reviews_count": { "type": "number", "description": "Number of reviews" },
+        "is_verified": { "type": "boolean", "description": "Trust indicator" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "supplierId", "name_ar", "name_fr", "price"]
+    },
+    "QuoteRequest": {
+      "title": "QuoteRequest",
+      "description": "B2B request for a price quote",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "productId": { "type": "string" },
+        "quantity": { "type": "number" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "responded", "rejected", "accepted"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "buyerId", "supplierId", "productId", "quantity"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Real-time chat entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "chatId", "senderId", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "Private user information and roles"
+    },
+    "/suppliers/{uid}": {
+      "schema": "SupplierProfile",
+      "description": "Public supplier storefront data"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Global product listing"
+    },
+    "/quotes/{quoteId}": {
+      "schema": "QuoteRequest",
+      "description": "Transaction-specific quote negotiations"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Individual chat messages"
+    }
+  }
+}
