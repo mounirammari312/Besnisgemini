@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { CATEGORIES, Category } from '@/constants/categories';
 import { Product } from '@/components/features/ProductCard';
-import { useFirestoreCollection } from '@/hooks/useFirestore';
+import { useSupabaseQuery } from '@/hooks/useSupabase';
 import { PageSkeleton } from '@/components/ui/PageSkeleton';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -27,11 +27,11 @@ const SEED_PRODUCTS: Product[] = [
 export function HomePage() {
   const { language } = useAppStore();
   const t = translations[language];
-  const { data: dbProducts, loading } = useFirestoreCollection<Product>('products');
+  const { data: dbProducts, loading } = useSupabaseQuery<Product>('products');
 
-  const products = dbProducts.length > 0 ? dbProducts : SEED_PRODUCTS;
+  const products = dbProducts && dbProducts.length > 0 ? dbProducts : SEED_PRODUCTS;
 
-  if (loading && dbProducts.length === 0) return <PageSkeleton />;
+  if (loading && (!dbProducts || dbProducts.length === 0)) return <PageSkeleton />;
 
   return (
     <div className="space-y-16 pb-20">

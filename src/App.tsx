@@ -14,6 +14,7 @@ import { SupplierProductsPage } from '@/pages/dashboard/SupplierProductsPage';
 import { BuyerOverview } from '@/pages/dashboard/BuyerOverview';
 import { AdminOverview } from '@/pages/dashboard/AdminOverview';
 import { MessagesPage } from '@/pages/dashboard/MessagesPage';
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
 import { Toaster } from '@/components/ui/sonner';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/login" element={<AuthPage />} />
           <Route path="/register" element={<AuthPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
           <Route path="/supplier/:id" element={<SupplierProfilePage />} />

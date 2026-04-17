@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -20,6 +22,23 @@ const COLORS = ['#1B3A5C', '#E8A838', '#94a3b8'];
 
 export function AdminOverview() {
   const [isSeeding, setIsSeeding] = React.useState(false);
+  const { session } = useAuth();
+  const [stats, setStats] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/admin/stats', {
+          headers: { 'Authorization': `Bearer ${session?.access_token}` }
+        });
+        const data = await res.json();
+        setStats(data);
+      } catch (e) {
+        console.error('Error fetching stats');
+      }
+    };
+    if (session) fetchStats();
+  }, [session]);
 
   const handleSeed = async () => {
     setIsSeeding(true);
@@ -69,10 +88,10 @@ export function AdminOverview() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard title="إجمالي المستخدمين" value="500" icon={<Users />} color="bg-blue-500" />
-        <MetricCard title="الموردون النشطون" value="86" icon={<Award />} color="bg-secondary" />
-        <MetricCard title="طلبات الشارات" value="12" icon={<Star className="h-5 w-5" />} color="bg-amber-500" />
-        <MetricCard title="بلاغات/نزاعات" value="3" icon={<AlertTriangle />} color="bg-red-500" />
+        <MetricCard title="إجمالي المستخدمين" value={stats?.totalUsers || "..."} icon={<Users />} color="bg-blue-500" />
+        <MetricCard title="الموردون النشطون" value={stats?.totalSuppliers || "..."} icon={<Award />} color="bg-secondary" />
+        <MetricCard title="المنتجات" value={stats?.totalProducts || "..."} icon={<Database className="h-5 w-5" />} color="bg-amber-500" />
+        <MetricCard title="طلبات الأسعار" value={stats?.totalQuotes || "..."} icon={<ShoppingCart />} color="bg-primary shadow-primary/20" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

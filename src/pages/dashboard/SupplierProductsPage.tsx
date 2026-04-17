@@ -12,12 +12,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { useAuth } from '@/context/AuthContext';
+import { useAppStore } from '@/store/useAppStore';
+import { useSupabaseQuery } from '@/hooks/useSupabase';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { Card } from '@/components/ui/card';
+
 export function SupplierProductsPage() {
-  const products = [
-    { id: '1', name: 'آلة طحن صناعية X200', category: 'معدات صناعية', price: 450000, stock: 12, status: 'active' },
-    { id: '2', name: 'مثقاب صناعي بوش', category: 'معدات صناعية', price: 35000, stock: 45, status: 'active' },
-    { id: '3', name: 'مولد كهربائي 50KVA', category: 'طاقة', price: 1200000, stock: 3, status: 'out_of_stock' },
-  ];
+  const { language } = useAppStore();
+  const { session, user, profile } = useAuth();
+  const { data: products, loading } = useSupabaseQuery<any>(
+    'products', 
+    (q) => q.eq('supplier_id', user?.id), 
+    [user?.id]
+  );
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-8">
@@ -62,19 +72,21 @@ export function SupplierProductsPage() {
                 <td className="p-4">
                   <div className="flex items-center gap-3">
                      <div className="h-10 w-10 rounded-lg bg-muted overflow-hidden flex items-center justify-center p-1 border">
-                        <Boxes className="h-5 w-5 text-primary/40" />
+                        {p.main_image ? <img src={p.main_image} className="object-cover w-full h-full" /> : <Boxes className="h-5 w-5 text-primary/40" />}
                      </div>
-                     <span className="font-bold">{p.name}</span>
+                     <span className="font-bold">
+                        {language === 'ar' ? p.name_ar : p.name_fr}
+                     </span>
                   </div>
                 </td>
-                <td className="p-4 text-sm">{p.category}</td>
+                <td className="p-4 text-sm">{p.category_id}</td>
                 <td className="p-4 font-bold">{formatCurrency(p.price)}</td>
                 <td className="p-4">
-                  <span className={p.stock < 10 ? "text-red-500 font-bold" : ""}>{p.stock} وحدة</span>
+                  <span className={(p.stock || 0) < 10 ? "text-red-500 font-bold" : ""}>{p.stock || 0} وحدة</span>
                 </td>
                 <td className="p-4">
-                  <Badge variant={p.status === 'active' ? 'secondary' : 'outline'} className={p.status === 'active' ? "bg-green-100 text-green-700 hover:bg-green-200 border-0" : ""}>
-                    {p.status === 'active' ? 'نشط' : 'نفذ'}
+                  <Badge variant={(p.stock || 0) > 0 ? 'secondary' : 'outline'} className={(p.stock || 0) > 0 ? "bg-green-100 text-green-700 hover:bg-green-200 border-0" : ""}>
+                    {(p.stock || 0) > 0 ? 'نشط' : 'نفذ'}
                   </Badge>
                 </td>
                 <td className="p-4 text-left">
@@ -98,6 +110,3 @@ export function SupplierProductsPage() {
   );
 }
 
-function Card({ children, className }: any) {
-  return <div className={cn("bg-white overflow-hidden", className)}>{children}</div>;
-}

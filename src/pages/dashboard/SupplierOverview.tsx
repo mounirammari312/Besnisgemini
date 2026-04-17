@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   BarChart, 
@@ -28,6 +30,24 @@ const data = [
 ];
 
 export function SupplierOverview() {
+  const { session } = useAuth();
+  const [stats, setStats] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/supplier/dashboard', {
+          headers: { 'Authorization': `Bearer ${session?.access_token}` }
+        });
+        const data = await res.json();
+        setStats(data);
+      } catch (e) {
+        console.error('Error fetching stats');
+      }
+    };
+    if (session) fetchStats();
+  }, [session]);
+
   return (
     <div className="space-y-8">
       {/* Stats Grid */}
@@ -41,16 +61,16 @@ export function SupplierOverview() {
         />
         <StatsCard 
           title="عروض الأسعار" 
-          value="86" 
-          change="+3" 
+          value={stats?.quotesCount || "0"} 
+          change="+0" 
           trend="up" 
           icon={<MessageSquare className="h-5 w-5" />} 
         />
         <StatsCard 
           title="المنتجات النشطة" 
-          value="24" 
-          change="-1" 
-          trend="down" 
+          value={stats?.productsCount || "0"} 
+          change="+0" 
+          trend="up" 
           icon={<Boxes className="h-5 w-5" />} 
         />
         <StatsCard 

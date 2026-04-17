@@ -130,16 +130,16 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
                       <Avatar className="h-10 w-10 border-2 border-secondary shadow-sm">
-                        <AvatarImage src={user.photoURL || undefined} />
-                        <AvatarFallback className="bg-primary text-white font-black">{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                        <AvatarImage src={profile?.photo_url || undefined} />
+                        <AvatarFallback className="bg-primary text-white font-black">{profile?.display_name?.charAt(0) || user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 rounded-2xl border-2 shadow-xl p-2 mt-2">
                     <DropdownMenuLabel className="font-black">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm leading-none">{user.displayName}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{profile?.role.toUpperCase()}</p>
+                        <p className="text-sm leading-none">{profile?.display_name || user.email}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{profile?.role?.toUpperCase()}</p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />

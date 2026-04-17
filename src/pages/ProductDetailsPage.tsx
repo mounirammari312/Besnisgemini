@@ -6,59 +6,93 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Star, ShieldCheck, Mail, MessageSquare, Share2, Heart, Award, Truck, Info, ChevronRight, ChevronLeft, Building2 } from 'lucide-react';
+import { Star, ShieldCheck, Mail, MessageSquare, Share2, Heart, Award, Truck, Info, ChevronRight, ChevronLeft, Building2, Loader2 } from 'lucide-react';
 import { BadgeIcon } from '@/components/features/ProductCard';
 import { motion } from 'framer-motion';
+import { useSupabaseQuery } from '@/hooks/useSupabase';
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 
 export function ProductDetailsPage() {
   const { id } = useParams();
   const { language } = useAppStore();
+  const { profile, session } = useAuth();
   const t = translations[language];
   
-  // Mock data for now
-  const product = {
-    id,
-    name_ar: 'آلة طحن صناعية عالية الدقة - موديل X200',
-    name_fr: 'Fraiseuse industrielle haute précision - Modèle X200',
-    description_ar: 'آلة طحن متطورة مخصصة لخطوط الإنتاج الكبيرة بمواصفات عالمية وضمان لمدة سنتين.',
-    description_fr: 'Machine de fraisage avancée conçue pour les grandes lignes de production avec des spécifications internationales et une garantie de deux ans.',
-    price: 450000,
-    images: [
-      'https://picsum.photos/seed/tool1/800/800',
-      'https://picsum.photos/seed/tool2/800/800',
-      'https://picsum.photos/seed/tool3/800/800'
-    ],
-    rating: 4.8,
-    reviews_count: 56,
-    stock: 12,
-    min_order: 1,
-    supplier: {
-      id: 's1',
-      name: 'شركة الجزائر للمعدات الثقيلة',
-      rating: 4.9,
-      is_verified: true,
-      joined: '2021',
-      location: 'الجزائر العاصمة',
-      badges: ['verified', 'premium', 'quality']
-    },
-    specs: [
-      { key_ar: 'القوة', key_fr: 'Puissance', value: '2500W' },
-      { key_ar: 'الوزن', key_fr: 'Poids', value: '120kg' },
-      { key_ar: 'الأبعاد', key_fr: 'Dimensions', value: '120x80x150cm' },
-    ]
-  };
+  const { data: products, loading } = useSupabaseQuery<any>('products', (q) => q.eq('id', id).single(), [id]);
+  const product = products?.[0];
 
   const [activeImg, setActiveImg] = React.useState(0);
+  const [isQuoting, setIsQuoting] = React.useState(false);
+  const [quoteQty, setQuoteQty] = React.useState(1);
+  const [quoteMsg, setQuoteMsg] = React.useState('');
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  const handleRequestQuote = async () => {
+    if (!session) {
+      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Veuillez vous connecter d\'abord');
+      return;
+    }
+
+    setIsQuoting(true);
+    try {
+      const response = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          product_id: product.id,
+          supplier_id: product.supplier_id,
+          quantity: quoteQty,
+          message: quoteMsg,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send quote');
+
+      toast.success(language === 'ar' ? 'تم إرسال طلب عرض السعر بنجاح!' : 'Devis envoyé avec succès !');
+      setIsModalOpen(false);
+    } catch (error) {
+      toast.error(language === 'ar' ? 'حدث خطأ أثناء إرسال الطلب' : 'Erreur lors de l\'envoi');
+    } finally {
+      setIsQuoting(false);
+    }
+  };
+
+  if (loading) return <PageSkeleton />;
+  if (!product) return <div className="container mx-auto px-4 py-20 text-center">Product not found</div>;
+
+  const images = product.gallery && product.gallery.length > 0 ? product.gallery : [product.main_image];
 
   return (
     <div className="container mx-auto px-4 py-12 space-y-12">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Image Gallery */}
         <div className="space-y-4">
-          <div className="aspect-square bg-white rounded-3xl overflow-hidden border shadow-sm relative">
-             <img src={product.images[activeImg]} className="w-full h-full object-cover" />
+          <div className="aspect-square bg-white rounded-3xl overflow-hidden border shadow-sm relative cursor-zoom-in group">
+             <motion.img 
+              whileHover={{ scale: 1.5 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              src={images[activeImg]} 
+              className="w-full h-full object-contain origin-center" 
+             />
+             <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {product.images.map((_, i) => (
+                {images.map((_, i) => (
                   <button 
                     key={i} 
                     onClick={() => setActiveImg(i)}
@@ -71,7 +105,7 @@ export function ProductDetailsPage() {
              </div>
           </div>
           <div className="grid grid-cols-4 gap-4">
-             {product.images.map((img, i) => (
+             {images.map((img, i) => (
                <button 
                 key={i} 
                 onClick={() => setActiveImg(i)}
@@ -124,10 +158,55 @@ export function ProductDetailsPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-             <Button size="lg" className="h-14 font-bold text-lg rounded-xl flex-1 gap-2">
-               <MessageSquare className="h-5 w-5" />
-               {language === 'ar' ? 'طلب عرض سعر' : 'Demander un devis'}
-             </Button>
+             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" className="h-14 font-bold text-lg rounded-xl flex-1 gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    {language === 'ar' ? 'طلب عرض سعر' : 'Demander un devis'}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="rounded-3xl max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-black font-heading text-primary">
+                      {language === 'ar' ? 'طلب عرض سعر جديد' : 'Nouveau devis'}
+                    </DialogTitle>
+                    <DialogDescription className="font-medium text-muted-foreground">
+                      {language === 'ar' ? 'أرسل طلباً مباشراً للمورد للحصول على أفضل سعر.' : 'Envoyez une demande directe au fournisseur.'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-6 py-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">{language === 'ar' ? 'الكمية المطلوبة' : 'Quantité souhaitée'}</label>
+                      <Input 
+                        type="number" 
+                        min={product.min_order || 1} 
+                        value={quoteQty} 
+                        onChange={(e) => setQuoteQty(parseInt(e.target.value))}
+                        className="h-12 rounded-xl border-2 font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">{language === 'ar' ? 'ملاحظات إضافية' : 'Notes supplémentaires'}</label>
+                      <Textarea 
+                        placeholder={language === 'ar' ? 'اكتب تفاصيل إضافية هنا...' : 'Écrivez des détails ici...'}
+                        value={quoteMsg}
+                        onChange={(e) => setQuoteMsg(e.target.value)}
+                        className="min-h-[120px] rounded-xl border-2 font-medium"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="outline" onClick={() => setIsModalOpen(false)} className="rounded-xl h-12 font-bold px-8">
+                       {language === 'ar' ? 'إلغاء' : 'Annuler'}
+                    </Button>
+                    <Button onClick={handleRequestQuote} disabled={isQuoting} className="rounded-xl h-12 font-black px-12 gap-2">
+                       {isQuoting && <Loader2 className="h-4 w-4 animate-spin" />}
+                       {language === 'ar' ? 'إرسال الطلب' : 'Envoyer la demande'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+             </Dialog>
+
              <Button size="lg" variant="secondary" className="h-14 font-bold text-lg rounded-xl flex-1 gap-2">
                <Mail className="h-5 w-5" />
                {language === 'ar' ? 'تواصل مع المورد' : 'Contacter le fournisseur'}

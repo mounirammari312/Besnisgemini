@@ -1,19 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth, db, onAuthStateChanged, FirebaseUser, googleProvider, signInWithPopup } from '@/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { handleFirestoreError, OperationType } from '@/lib/firestore-errors';
+import { supabase } from '@/lib/supabase';
+import { User, Session } from '@supabase/supabase-js';
 
 interface UserProfile {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
+  id: string;
+  email: string;
+  display_name: string | null;
+  photo_url: string | null;
   role: 'buyer' | 'supplier' | 'admin';
-  companyName?: string;
+  company_name?: string;
 }
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: User | null;
+  session: Session | null;
   profile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: (role: 'buyer' | 'supplier', companyName?: string) => Promise<void>;
@@ -23,80 +23,88 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        try {
-          const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (profileDoc.exists()) {
-            setProfile(profileDoc.data() as UserProfile);
-          } else {
-            setProfile(null);
-          }
-        } catch (error) {
+  // Fetch profile when user is available
+  const fetchProfile = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', uid)
+        .single();
+      
+      if (error) {
+        if (error.code !== 'PGRST116') { // Not found is fine
           console.error("Error fetching user profile:", error);
-          setProfile(null);
         }
+        return null;
+      }
+      return data as UserProfile;
+    } catch (e) {
+      console.error("Exception fetching profile:", e);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id).then(setProfile);
+      }
+      setLoading(false);
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const userProfile = await fetchProfile(session.user.id);
+        setProfile(userProfile);
       } else {
         setProfile(null);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
   const logout = async () => {
-    await auth.signOut();
+    await supabase.auth.signOut();
   };
 
   const signInWithGoogle = async (role: 'buyer' | 'supplier' = 'buyer', companyName?: string) => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
-      
-      const userRef = doc(db, 'users', firebaseUser.uid);
-      const profileDoc = await getDoc(userRef);
-      
-      if (!profileDoc.exists()) {
-        const newProfile: UserProfile = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-          role: role,
-          companyName: companyName || '',
-        };
-        
-        try {
-          await setDoc(userRef, {
-            ...newProfile,
-            createdAt: serverTimestamp(),
-          });
-          setProfile(newProfile);
-        } catch (error) {
-          handleFirestoreError(error, OperationType.CREATE, `users/${firebaseUser.uid}`);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'concent',
+          },
+          // We can't easily pass custom data to redirect, so we'll handle the profile creation 
+          // after redirect back in the useEffect or a dedicated callback page
+          redirectTo: `${window.location.origin}/auth/callback?role=${role}&company=${companyName || ''}`
         }
-      } else {
-        setProfile(profileDoc.data() as UserProfile);
-      }
+      });
+      
+      if (error) throw error;
     } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.warn('Google sign-in popup was closed before completion.');
-      } else {
-        console.error('Google sign-in error:', error);
-      }
+      console.error('Google sign-in error:', error);
       throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
