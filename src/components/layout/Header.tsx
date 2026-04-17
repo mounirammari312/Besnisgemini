@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Link, useNavigate } from 'react-router-dom'; // أضف Link و useNavigate
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +21,16 @@ export function Header() {
   const { language, currency, setLanguage, setCurrency } = useAppStore();
   const t = translations[language];
   const { user, profile, logout } = useAuth();
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = React.useState(false);
+
+  // منطق تحديد رابط لوحة التحكم بناءً على الدور (Role)
+  const getDashboardLink = () => {
+    if (!user) return '/auth';
+    if (profile?.role === 'admin') return '/admin';
+    if (profile?.role === 'supplier') return '/dashboard/supplier';
+    return '/dashboard/buyer';
+  };
 
   React.useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -28,7 +38,8 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  return (
+  // ... باقي الكود في قسم الـ JSX ...
+  // تأكد من استخدام <Link to={getDashboardLink()}> عند أيقونة الحساب
     <header className={cn(
       "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
       isScrolled ? "bg-white/95 backdrop-blur-md shadow-md py-2" : "bg-primary py-4"
