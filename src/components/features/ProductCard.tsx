@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Link } from 'react-router-dom';
 import { Eye, Heart, ShoppingCart, Star, ShieldCheck, Trophy, Truck, BadgeCheck } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ export interface Product {
   name_ar: string;
   name_fr: string;
   price: number;
-  image: string;
+  main_image: string;
   rating: number;
   reviews_count: number;
   supplier_id: string;
@@ -24,6 +25,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, language }) => {
   const name = language === 'ar' ? product.name_ar : product.name_fr;
+  const image = product.main_image || 'https://picsum.photos/seed/product/400/400';
 
   return (
     <motion.div 
@@ -31,12 +33,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, language }) =
       className="bg-white rounded-xl border border-border overflow-hidden hover:shadow-xl transition-all group"
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
-        <img 
-          src={product.image} 
-          alt={name} 
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          referrerPolicy="no-referrer"
-        />
+        <Link to={`/product/${product.id}`} className="block w-full h-full">
+          <img 
+            src={image} 
+            alt={name} 
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            referrerPolicy="no-referrer"
+          />
+        </Link>
         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button size="icon" variant="secondary" className="rounded-full shadow-lg">
             <Heart className="h-4 w-4" />

@@ -83,6 +83,17 @@ create table if not exists messages (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- 7. Reviews
+create table if not exists reviews (
+  id uuid default gen_random_uuid() primary key,
+  product_id uuid references products(id) on delete cascade not null,
+  buyer_id uuid references profiles(id) not null,
+  rating integer check (rating >= 1 and rating <= 5) not null,
+  comment text,
+  supplier_response text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- RLS (Row Level Security) - Prototype
 -- Enable RLS
 alter table profiles enable row level security;
@@ -91,6 +102,7 @@ alter table products enable row level security;
 alter table quotes enable row level security;
 alter table chats enable row level security;
 alter table messages enable row level security;
+alter table reviews enable row level security;
 
 -- Profiles: Own profile access
 create policy "Users can view own profile" on profiles for select using (auth.uid() = id);
@@ -99,3 +111,14 @@ create policy "Users can update own profile" on profiles for update using (auth.
 -- Product: Public read
 create policy "Products are public" on products for select using (true);
 create policy "Suppliers can manage own products" on products for all using (auth.uid() = supplier_id);
+
+-- Reviews: Public read
+create policy "Reviews are public" on reviews for select using (true);
+create policy "Buyers can create reviews" on reviews for insert with check (auth.uid() = buyer_id);
+create policy "Suppliers can respond to reviews" on reviews for update using (
+  exists (
+    select 1 from products 
+    where products.id = reviews.product_id 
+    and products.supplier_id = auth.uid()
+  )
+);

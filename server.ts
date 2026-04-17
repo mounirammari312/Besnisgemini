@@ -326,6 +326,83 @@ async function startServer() {
     res.json({ logs: ['System healthy', 'New user registered', 'Product updated'] });
   });
 
+  // 27. Submit Review (Buyer)
+  app.post('/api/reviews', authenticate, async (req: any, res) => {
+    const schema = z.object({
+      product_id: z.string().uuid(),
+      rating: z.number().min(1).max(5),
+      comment: z.string().optional(),
+    });
+
+    try {
+      const validated = schema.parse(req.body);
+      
+      // 1. Insert review
+      const { data: review, error: rError } = await supabaseAdmin.from('reviews').insert({
+        ...validated,
+        buyer_id: req.user.id
+      }).select().single();
+
+      if (rError) throw rError;
+
+      // 2. Recalculate product rating
+      const { data: reviews } = await supabaseAdmin.from('reviews').select('rating').eq('product_id', validated.product_id);
+      if (reviews) {
+        const avg = reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length;
+        await supabaseAdmin.from('products').update({
+          rating: Number(avg.toFixed(1)),
+          reviews_count: reviews.length
+        }).eq('id', validated.product_id);
+      }
+
+      res.json(review);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message || e.errors });
+    }
+  });
+
+  // 28. Get Product Reviews
+  app.get('/api/products/:id/reviews', async (req, res) => {
+    const { data, error } = await supabaseAdmin
+      .from('reviews')
+      .select('*, profiles:buyer_id(display_name, photo_url)')
+      .eq('product_id', req.params.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
+  // 29. Supplier Response to Review
+  app.patch('/api/reviews/:id/response', authenticate, async (req: any, res) => {
+    const { response } = req.body;
+    
+    // Check if supplier owns the product for this review
+    const { data: review } = await supabaseAdmin.from('reviews').select('product_id').eq('id', req.params.id).single();
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+
+    const { data: product } = await supabaseAdmin.from('products').select('supplier_id').eq('id', review.product_id).single();
+    if (product?.supplier_id !== req.user.id) return res.status(403).json({ error: 'Permission denied' });
+
+    const { data, error } = await supabaseAdmin.from('reviews').update({
+      supplier_response: response
+    }).eq('id', req.params.id).select().single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
+  // 30. List All Supplier Reviews
+  app.get('/api/supplier/reviews', authenticate, async (req: any, res) => {
+    const { data, error } = await supabaseAdmin
+      .from('reviews')
+      .select('*, products!inner(*), profiles:buyer_id(*)')
+      .eq('products.supplier_id', req.user.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
   // Vite integration
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

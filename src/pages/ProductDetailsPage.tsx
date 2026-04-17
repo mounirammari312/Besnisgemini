@@ -31,14 +31,55 @@ export function ProductDetailsPage() {
   const { profile, session } = useAuth();
   const t = translations[language];
   
-  const { data: products, loading } = useSupabaseQuery<any>('products', (q) => q.eq('id', id).single(), [id]);
+  const { data: products, loading } = useSupabaseQuery<any>('products', (q) => q.eq('id', id).select('*, suppliers(*)').single(), [id]);
   const product = products?.[0];
+
+  const { data: reviews, refresh: refreshReviews } = useSupabaseQuery<any>('reviews', (q) => q.eq('product_id', id).select('*, profiles:buyer_id(*)').order('created_at', { ascending: false }), [id]);
 
   const [activeImg, setActiveImg] = React.useState(0);
   const [isQuoting, setIsQuoting] = React.useState(false);
   const [quoteQty, setQuoteQty] = React.useState(1);
   const [quoteMsg, setQuoteMsg] = React.useState('');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+  // Review State
+  const [reviewRating, setReviewRating] = React.useState(5);
+  const [reviewComment, setReviewComment] = React.useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
+
+  const handlePostReview = async () => {
+    if (!session) {
+      toast.error(language === 'ar' ? 'يرجى تسجيل الدخول أولاً' : 'Veuillez vous connecter d\'abord');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          product_id: product.id,
+          rating: reviewRating,
+          comment: reviewComment,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to post review');
+
+      toast.success(language === 'ar' ? 'شكراً لتقييمك!' : 'Merci pour votre avis !');
+      setReviewComment('');
+      setReviewRating(5);
+      refreshReviews();
+    } catch (error) {
+      toast.error(language === 'ar' ? 'حدث خطأ أثناء إرسال التقييم' : 'Erreur lors de l\'envoi');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   const handleRequestQuote = async () => {
     if (!session) {
@@ -257,6 +298,9 @@ export function ProductDetailsPage() {
             <TabsTrigger value="shipping" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 font-bold">
               {language === 'ar' ? 'الشحن والتسليم' : 'Livraison'}
             </TabsTrigger>
+            <TabsTrigger value="reviews" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-0 font-bold">
+              {language === 'ar' ? `التقييمات (${product.reviews_count})` : `Avis (${product.reviews_count})`}
+            </TabsTrigger>
           </TabsList>
           <div className="p-8">
             <TabsContent value="details" className="mt-0">
@@ -281,6 +325,78 @@ export function ProductDetailsPage() {
                     <p className="font-bold">{language === 'ar' ? 'معلومات الشحن' : 'Informations de livraison'}</p>
                     <p className="text-sm text-muted-foreground">التسليم متاح لجميع الولايات الجزائرية خلال 3-5 أيام عمل. يتم تحديد تكلفة الشحن بناءً على الموقع والكمية.</p>
                   </div>
+               </div>
+            </TabsContent>
+            <TabsContent value="reviews" className="mt-0 space-y-12">
+               {/* Review Form */}
+               {session && profile?.role === 'buyer' && (
+                 <div className="bg-muted/30 rounded-3xl p-8 border space-y-6">
+                    <h3 className="font-heading text-xl font-black text-primary uppercase">{language === 'ar' ? 'أضف تقييمك' : 'Ajouter un avis'}</h3>
+                    <div className="space-y-4">
+                       <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <button 
+                              key={s} 
+                              onClick={() => setReviewRating(s)}
+                              className={cn("transition-transform hover:scale-110", s <= reviewRating ? "text-yellow-500" : "text-gray-300")}
+                            >
+                              <Star className={cn("h-8 w-8", s <= reviewRating && "fill-current")} />
+                            </button>
+                          ))}
+                       </div>
+                       <Textarea 
+                        placeholder={language === 'ar' ? 'ما رأيك في المنتج؟' : 'Que pensez-vous du produit ?'}
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        className="rounded-2xl border-2 min-h-[100px] font-medium"
+                       />
+                       <Button 
+                        onClick={handlePostReview} 
+                        disabled={isSubmittingReview}
+                        className="rounded-xl h-12 px-8 font-black uppercase tracking-tight"
+                       >
+                         {isSubmittingReview ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                         {language === 'ar' ? 'نشر التقييم' : 'Publier l\'avis'}
+                       </Button>
+                    </div>
+                 </div>
+               )}
+
+               {/* Reviews List */}
+               <div className="space-y-8">
+                  {reviews?.map((r) => (
+                    <div key={r.id} className="space-y-4 pb-8 border-b last:border-0">
+                       <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-4">
+                             <div className="h-12 w-12 rounded-full bg-secondary/20 flex items-center justify-center font-bold text-primary">
+                                {r.profiles?.display_name?.[0]?.toUpperCase() || 'U'}
+                             </div>
+                             <div>
+                                <p className="font-bold">{r.profiles?.display_name || 'Anonymous User'}</p>
+                                <div className="flex text-yellow-500">
+                                   {Array.from({ length: 5 }).map((_, i) => (
+                                     <Star key={i} className={cn("h-3 w-3 fill-current", i >= r.rating && "text-gray-300 fill-none")} />
+                                   ))}
+                                </div>
+                             </div>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                       </div>
+                       <p className="text-muted-foreground leading-relaxed">{r.comment}</p>
+                       
+                       {r.supplier_response && (
+                         <div className="bg-primary/5 p-4 rounded-2xl border-l-4 border-secondary ml-8 space-y-2">
+                            <p className="text-xs font-black uppercase text-secondary">{language === 'ar' ? 'رد المورد' : 'Réponse du fournisseur'}</p>
+                            <p className="text-sm font-medium italic">"{r.supplier_response}"</p>
+                         </div>
+                       )}
+                    </div>
+                  ))}
+                  {(!reviews || reviews.length === 0) && (
+                    <div className="text-center py-20 text-muted-foreground italic">
+                       {language === 'ar' ? 'لا توجد تقييمات بعد' : 'Aucun avis pour le moment'}
+                    </div>
+                  )}
                </div>
             </TabsContent>
           </div>

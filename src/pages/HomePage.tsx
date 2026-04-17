@@ -18,10 +18,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 const SEED_PRODUCTS: Product[] = [
-  { id: '1', name_ar: 'آلة طحن صناعية عالية الدقة', name_fr: 'Fraiseuse industrielle haute précision', price: 450000, image: 'https://picsum.photos/seed/tool/400/400', rating: 4, reviews_count: 24, supplier_id: 's1', is_verified: true },
-  { id: '2', name_ar: 'زيت زيتون بكر ممتاز 5 لتر', name_fr: 'Huile d\'olive vierge extra 5L', price: 6500, image: 'https://picsum.photos/seed/olive/400/400', rating: 5, reviews_count: 156, supplier_id: 's2', is_verified: true },
-  { id: '3', name_ar: 'ألواح شمسية 450 واط', name_fr: 'Panneaux solaires 450W', price: 28000, image: 'https://picsum.photos/seed/solar/400/400', rating: 5, reviews_count: 89, supplier_id: 's3', is_verified: false },
-  { id: '4', name_ar: 'كراتين شحن مقواة (100 قطعة)', name_fr: 'Cartons d\'expédition renforcés (100 pcs)', price: 12000, image: 'https://picsum.photos/seed/box/400/400', rating: 3, reviews_count: 12, supplier_id: 's4', is_verified: false },
+  { id: '1', name_ar: 'آلة طحن صناعية عالية الدقة', name_fr: 'Fraiseuse industrielle haute précision', price: 450000, main_image: 'https://picsum.photos/seed/tool/400/400', rating: 4, reviews_count: 24, supplier_id: 's1', is_verified: true },
+  { id: '2', name_ar: 'زيت زيتون بكر ممتاز 5 لتر', name_fr: 'Huile d\'olive vierge extra 5L', price: 6500, main_image: 'https://picsum.photos/seed/olive/400/400', rating: 5, reviews_count: 156, supplier_id: 's2', is_verified: true },
+  { id: '3', name_ar: 'ألواح شمسية 450 واط', name_fr: 'Panneaux solaires 450W', price: 28000, main_image: 'https://picsum.photos/seed/solar/400/400', rating: 5, reviews_count: 89, supplier_id: 's3', is_verified: false },
+  { id: '4', name_ar: 'كراتين شحن مقواة (100 قطعة)', name_fr: 'Cartons d\'expédition renforcés (100 pcs)', price: 12000, main_image: 'https://picsum.photos/seed/box/400/400', rating: 3, reviews_count: 12, supplier_id: 's4', is_verified: false },
 ];
 
 export function HomePage() {
