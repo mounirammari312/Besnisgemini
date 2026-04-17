@@ -17,14 +17,13 @@ import { BuyerOverview } from '@/pages/dashboard/BuyerOverview';
 import { AdminOverview } from '@/pages/dashboard/AdminOverview';
 import { MessagesPage } from '@/pages/dashboard/MessagesPage';
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
-import RequestQuotePage from '@/pages/RequestQuotePage'; // إضافة صفحة طلب السعر
+import RequestQuotePage from '@/pages/RequestQuotePage'; // إضافة الصفحة الجديدة
 import { Toaster } from '@/components/ui/sonner';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Main Layout Routes */}
         <Route element={<Layout><Outlet /></Layout>}>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<AuthPage />} />
@@ -33,15 +32,12 @@ export default function App() {
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
-          {/* تفعيل مسار طلب عرض السعر */}
-          <Route path="/product/:productId/quote" element={<RequestQuotePage />} /> 
+          <Route path="/product/:id/quote" element={<RequestQuotePage />} /> 
           <Route path="/supplier/:id" element={<SupplierProfilePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/compare" element={<ComparisonPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
-
-        {/* Dashboard Routes */}
         <Route path="/dashboard/supplier" element={<DashboardLayout role="supplier"><SupplierOverview /></DashboardLayout>} />
         <Route path="/dashboard/supplier/products" element={<DashboardLayout role="supplier"><SupplierProductsPage /></DashboardLayout>} />
         <Route path="/dashboard/supplier/reviews" element={<DashboardLayout role="supplier"><SupplierReviewsPage /></DashboardLayout>} />
