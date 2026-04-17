@@ -6,11 +6,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
-import { Users, UserCheck, AlertTriangle, CreditCard, ShoppingCart, Award, Megaphone, Activity, Star, Database, CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
+import { Users, UserCheck, AlertTriangle, CreditCard, ShoppingCart, Award, Megaphone, Activity, Star, Database, CheckCircle2, Loader2, RefreshCcw, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { seedInitialData } from '@/services/seedData';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 const userStats = [
   { name: 'Active', value: 450 },
@@ -24,21 +26,60 @@ export function AdminOverview() {
   const [isSeeding, setIsSeeding] = React.useState(false);
   const { session } = useAuth();
   const [stats, setStats] = React.useState<any>(null);
+  const [pendingRequests, setPendingRequests] = React.useState<any[]>([]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/admin/stats', {
+        headers: { 'Authorization': `Bearer ${session?.access_token}` }
+      });
+      const data = await res.json();
+      setStats(data);
+    } catch (e) {
+      console.error('Error fetching stats');
+    }
+  };
+
+  const fetchPending = async () => {
+    try {
+       // Combine badges and ads for the overview
+       const [badges, ads] = await Promise.all([
+         supabase.from('badge_requests').select('*, suppliers(*)').eq('status', 'pending'),
+         supabase.from('ad_requests').select('*, suppliers(*)').eq('status', 'pending'),
+       ]);
+       setPendingRequests([...(badges.data || []), ...(ads.data || [])]);
+    } catch (e) {
+      console.error('Error fetching pending');
+    }
+  };
 
   React.useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch('/api/admin/stats', {
-          headers: { 'Authorization': `Bearer ${session?.access_token}` }
-        });
-        const data = await res.json();
-        setStats(data);
-      } catch (e) {
-        console.error('Error fetching stats');
-      }
-    };
-    if (session) fetchStats();
+    if (session) {
+      fetchStats();
+      fetchPending();
+    }
   }, [session]);
+
+  const handleAction = async (id: string, type: 'badge' | 'ad', status: 'approved' | 'rejected') => {
+    try {
+      const endpoint = type === 'badge' ? `/api/admin/badges/requests/${id}` : `/api/admin/ads/requests/${id}`;
+      const res = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        toast.success(status === 'approved' ? 'تم القبول' : 'تم الرفض');
+        fetchPending();
+        fetchStats();
+      }
+    } catch (e) {
+      toast.error('Error processing request');
+    }
+  };
 
   const handleSeed = async () => {
     setIsSeeding(true);
@@ -95,6 +136,39 @@ export function AdminOverview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         {/* Global Config Panel */}
+         <Card className="rounded-2xl border-none shadow-sm h-full">
+            <CardHeader>
+               <CardTitle className="font-heading font-bold flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-primary" />
+                  أسعار الصرف EXCHANGE RATES
+               </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+               <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border">
+                  <span className="font-bold text-sm">1 DZD = ? EUR</span>
+                  <Input 
+                    type="number" 
+                    step="0.0001"
+                    className="w-24 h-9 font-bold" 
+                    defaultValue="0.0068" 
+                    onChange={e => useAppStore.getState().setExchangeRate('EUR', parseFloat(e.target.value))}
+                  />
+               </div>
+               <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border">
+                  <span className="font-bold text-sm">1 DZD = ? USD</span>
+                  <Input 
+                    type="number" 
+                    step="0.0001"
+                    className="w-24 h-9 font-bold" 
+                    defaultValue="0.0074" 
+                    onChange={e => useAppStore.getState().setExchangeRate('USD', parseFloat(e.target.value))}
+                  />
+               </div>
+               <p className="text-[10px] text-muted-foreground italic">* يتم تحديث هذه الأسعار لحظياً لكافة مستخدمي المنصة.</p>
+            </CardContent>
+         </Card>
+
          {/* Main Growth Chart */}
          <Card className="lg:col-span-2 rounded-2xl border-none shadow-sm">
            <CardHeader>
@@ -105,14 +179,7 @@ export function AdminOverview() {
            </CardHeader>
            <CardContent className="h-[350px]">
              <ResponsiveContainer width="100%" height="100%">
-               <LineChart data={[
-                 { month: 'Jan', users: 120, suppliers: 10 },
-                 { month: 'Feb', users: 180, suppliers: 15 },
-                 { month: 'Mar', users: 250, suppliers: 22 },
-                 { month: 'Apr', users: 340, suppliers: 35 },
-                 { month: 'May', users: 420, suppliers: 50 },
-                 { month: 'Jun', users: 500, suppliers: 86 },
-               ]}>
+               <LineChart data={stats?.growthChart || []}>
                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                  <XAxis dataKey="month" axisLine={false} tickLine={false} />
                  <YAxis axisLine={false} tickLine={false} />
@@ -168,20 +235,39 @@ export function AdminOverview() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-             {[1, 2, 3].map(i => (
-               <div key={i} className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/10 transition-all">
+             {pendingRequests.length === 0 && (
+               <div className="text-center py-8 text-muted-foreground italic">لا توجد طلبات معلقة حالياً No pending requests.</div>
+             )}
+             {pendingRequests.map(req => (
+               <div key={req.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-transparent hover:border-primary/10 transition-all">
                   <div className="flex items-center gap-4">
                      <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center border">
-                        <Award className="h-6 w-6 text-amber-500" />
+                        {req.badge_type_id ? <Award className="h-6 w-6 text-amber-500" /> : <Megaphone className="h-6 w-6 text-primary" />}
                      </div>
                      <div>
-                        <p className="font-bold">طلب شارة "مورد مميز"</p>
-                        <p className="text-xs text-muted-foreground">من: شركة النور للتصدير</p>
+                        <p className="font-bold">
+                          {req.badge_type_id ? `طلب شارة "${req.badge_type_id}"` : `طلب إعلان "${req.ad_type_id}"`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">من: {req.suppliers?.company_name || req.suppliers?.name}</p>
                      </div>
                   </div>
                   <div className="flex gap-2">
-                     <Button size="sm" variant="outline" className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100">قبول</Button>
-                     <Button size="sm" variant="outline" className="text-red-600 border-red-200 bg-red-50 hover:bg-red-100">رفض</Button>
+                     <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-green-600 border-green-200 bg-green-50 hover:bg-green-100"
+                      onClick={() => handleAction(req.id, req.badge_type_id ? 'badge' : 'ad', 'approved')}
+                     >
+                       قبول Approve
+                     </Button>
+                     <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-red-600 border-red-200 bg-red-50 hover:bg-red-100"
+                      onClick={() => handleAction(req.id, req.badge_type_id ? 'badge' : 'ad', 'rejected')}
+                     >
+                       رفض Reject
+                     </Button>
                   </div>
                </div>
              ))}

@@ -48,13 +48,15 @@ export function SupplierOverview() {
     if (session) fetchStats();
   }, [session]);
 
+  const dashboardData = stats?.chartData || data;
+
   return (
     <div className="space-y-8">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard 
           title="إجمالي المبيعات" 
-          value="450,000 د.ج" 
+          value={formatCurrency(stats?.totalSales || 0)} 
           change="+12.5%" 
           trend="up" 
           icon={<ShoppingCart className="h-5 w-5" />} 
@@ -75,7 +77,7 @@ export function SupplierOverview() {
         />
         <StatsCard 
           title="تقييم المتجر" 
-          value="4.8/5" 
+          value={`${stats?.avgRating || "0.0"}/5`} 
           change="مستقر" 
           trend="up" 
           icon={<Star className="h-5 w-5" />} 
@@ -90,7 +92,7 @@ export function SupplierOverview() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
+              <AreaChart data={dashboardData}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#1B3A5C" stopOpacity={0.1}/>
@@ -113,7 +115,7 @@ export function SupplierOverview() {
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
+              <BarChart data={dashboardData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />

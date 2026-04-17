@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type Language = 'ar' | 'fr';
-type Currency = 'DZD' | 'EUR' | 'USD';
+export type Language = 'ar' | 'fr';
+export type Currency = 'DZD' | 'EUR' | 'USD';
 
 interface AppState {
   language: Language;
@@ -10,6 +10,8 @@ interface AppState {
   setLanguage: (lang: Language) => void;
   setCurrency: (curr: Currency) => void;
   exchangeRates: Record<Currency, number>;
+  setExchangeRates: (rates: Record<Currency, number>) => void;
+  setExchangeRate: (curr: Currency, rate: number) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -28,6 +30,10 @@ export const useAppStore = create<AppState>()(
         document.documentElement.lang = language;
       },
       setCurrency: (currency) => set({ currency }),
+      setExchangeRates: (exchangeRates) => set({ exchangeRates }),
+      setExchangeRate: (curr, rate) => set(state => ({
+        exchangeRates: { ...state.exchangeRates, [curr]: rate }
+      })),
     }),
     {
       name: 'businfo-settings',

@@ -61,8 +61,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
           { label: 'الطلبات', href: '/dashboard/supplier/orders', icon: <ShoppingCart /> },
           { label: 'العروض', href: '/dashboard/supplier/quotes', icon: <FileText /> },
           { label: 'التقييمات', href: '/dashboard/supplier/reviews', icon: <Star /> },
-          { label: 'الشارات', href: '/dashboard/supplier/badges', icon: <Award /> },
-          { label: 'الإعلانات', href: '/dashboard/supplier/ads', icon: <Megaphone /> },
+          { label: 'نمو المتجر', href: '/dashboard/supplier/growth', icon: <Award /> },
           { label: 'الرسائل', href: '/dashboard/supplier/messages', icon: <MessageSquare /> },
           { label: 'الإعدادات', href: '/dashboard/supplier/settings', icon: <Settings /> },
         ];

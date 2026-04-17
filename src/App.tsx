@@ -12,6 +12,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { SupplierOverview } from '@/pages/dashboard/SupplierOverview';
 import { SupplierProductsPage } from '@/pages/dashboard/SupplierProductsPage';
 import { SupplierReviewsPage } from '@/pages/dashboard/SupplierReviewsPage';
+import { SupplierGrowthPage } from '@/pages/dashboard/SupplierGrowthPage';
 import { BuyerOverview } from '@/pages/dashboard/BuyerOverview';
 import { AdminOverview } from '@/pages/dashboard/AdminOverview';
 import { MessagesPage } from '@/pages/dashboard/MessagesPage';
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/dashboard/supplier" element={<DashboardLayout role="supplier"><SupplierOverview /></DashboardLayout>} />
         <Route path="/dashboard/supplier/products" element={<DashboardLayout role="supplier"><SupplierProductsPage /></DashboardLayout>} />
         <Route path="/dashboard/supplier/reviews" element={<DashboardLayout role="supplier"><SupplierReviewsPage /></DashboardLayout>} />
+        <Route path="/dashboard/supplier/growth" element={<DashboardLayout role="supplier"><SupplierGrowthPage /></DashboardLayout>} />
         <Route path="/dashboard/supplier/messages" element={<DashboardLayout role="supplier"><MessagesPage /></DashboardLayout>} />
         <Route path="/dashboard/buyer" element={<DashboardLayout role="buyer"><BuyerOverview /></DashboardLayout>} />
         <Route path="/dashboard/buyer/messages" element={<DashboardLayout role="buyer"><MessagesPage /></DashboardLayout>} />
