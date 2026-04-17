@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
-import { Layout } from '@/components/Layout/Layout';
-import { DashboardLayout } from '@/components/Layout/DashboardLayout';
+import { Layout } from '@/components/layout/Layout'; // تم تصحيح حرف l
+import { DashboardLayout } from '@/components/layout/DashboardLayout'; // تم تصحيح حرف l
 import { HomePage } from '@/pages/HomePage';
 import { AuthPage } from '@/pages/AuthPage';
 import { SearchPage } from '@/pages/SearchPage';
@@ -17,6 +17,7 @@ import { BuyerOverview } from '@/pages/dashboard/BuyerOverview';
 import { AdminOverview } from '@/pages/dashboard/AdminOverview';
 import { MessagesPage } from '@/pages/dashboard/MessagesPage';
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
+import RequestQuotePage from '@/pages/RequestQuotePage'; // إضافة صفحة طلب السعر
 import { Toaster } from '@/components/ui/sonner';
 
 export default function App() {
@@ -32,6 +33,8 @@ export default function App() {
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
+          {/* تفعيل مسار طلب عرض السعر */}
+          <Route path="/product/:productId/quote" element={<RequestQuotePage />} /> 
           <Route path="/supplier/:id" element={<SupplierProfilePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/compare" element={<ComparisonPage />} />
